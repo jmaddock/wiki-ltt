@@ -1,5 +1,5 @@
 var express = require('express');
-var d3 = require("d3");
+//var d3 = require("d3");
 var app = express();
 
 app.use(express.static('static'));
