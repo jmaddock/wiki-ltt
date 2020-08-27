@@ -1,8 +1,16 @@
-var express = require('express');
-//var d3 = require("d3");
+const express = require('express');
+
 var app = express();
 
 app.use(express.static('static'));
+
+app.get('/greyscale', function (req, res) {
+    res.sendFile( __dirname + "/" + "zoomable_knowledge_graph_greyscale.html" );
+})
+
+app.get('/wrap', function (req, res) {
+    res.sendFile( __dirname + "/" + "zoomable_knowledge_graph_text_wrap.html" );
+})
 
 app.get('/*', function (req, res) {
     res.sendFile( __dirname + "/" + "zoomable_knowledge_graph.html" );

@@ -2,10 +2,10 @@
 <meta charset="utf-8">
 
 <!-- Load d3.js -->
+
 <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/uuid/8.3.0/uuidv4.min.js"></script>
 <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/d3/4.13.0/d3.min.js"></script>
-<!--<script src="https://code.jquery.com/jquery-1.7.2.min.js"></script>-->
-
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 
 <style>
  div.tooltip {	
@@ -27,10 +27,6 @@
 <div id="container"></div>
 
 <script>
- //var d3 = require("d3");
-
- var colorPalette = ['#EDC7CF', '#D0CFEC', '#E1E5EE', '#E6EED6', '#F7C59F', '#E3655B', '#CFD186', '#5B8C5A', '#7EA3CC', '#FF7033', '#BE6E46', '#99708F', '#F18C7E', '#F4C3C2', '#DD99BB', '#536B79', '#2E92EF', '#E6898C', '#896C74', '#8C7D82', '#875C74', '#2877A4', '#FFA69E', '#8385C3', '#0B7884', '#CC1400', '#BBA177', '#C3423F', '#C47335', '#575761', '#EFAAC4', '#C66AC8', '#FF934F', '#FED4E7', '#0DAB8EEDC7CF', '#D0CFEC', '#E1E5EE', '#E6EED6', '#F7C59F', '#E3655B', '#CFD186', '#5B8C5A', '#7EA3CC', '#FF7033', '#BE6E46', '#99708F', '#F18C7E', '#F4C3C2', '#DD99BB', '#536B79', '#2E92EF', '#E6898C', '#896C74', '#8C7D82', '#875C74', '#2877A4', '#FFA69E', '#8385C3', '#0B7884', '#CC1400', '#BBA177', '#C3423F', '#C47335', '#575761', '#EFAAC4', '#C66AC8', '#FF934F', '#FED4E7', '#0DAB8E'];
- 
  var width = 1500;
  var height = 1000;
  var textLineSpace = 12;
@@ -38,7 +34,7 @@
  var headerHeight = (headerLineSpace * 2) + (headerLineSpace * .5); 
  var textStyle = "sans-serif";
  var format = d3.format(",d");
- //var color = d3.scaleOrdinal(d3.schemeCategory10)
+ //var color = d3.scaleSequential(d3['interpolateGreys']);
  var layout = "treemapSquarify";
  var datapath = "edcast_taxo_8-5-20.json";
  var padding = 1;
@@ -47,6 +43,10 @@
  var margin = {top: 10, right: 10, bottom: 10, left: 10},
      width = width - margin.left - margin.right,
      height = height - margin.top - margin.bottom;
+
+ function color(range) {
+     return d3.scaleSequential(d3['interpolateGreys']).domain(range);
+ }
              
  function tile(node, x0, y0, x1, y1) {
      d3.treemapBinary(node, 0, 0, width, height);
@@ -135,8 +135,6 @@
 
      function render(group, root) {
 
-         var color = d3.scaleOrdinal().domain(data).range(colorPalette);
-
          // use this information to add rectangles:
          var nodes = group.selectAll("g")
                           .data(root.children.concat(root))
@@ -147,14 +145,15 @@
               .attr("cursor", "pointer")
               .on("click", d => d === root ? zoomout(root) : zoomin(d));
 
+         var range = d3.extent(nodes.data(), d => d === root ? null: d.value)
+
          nodes.append("rect")
               .attr('x', function (d) { return d.x0; })
               .attr('y', function (d) { return d.y0; })
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
-              .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-             //.attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              .attr("stroke",d => !d.children ? "black" : "")
+              .attr("fill", d => d === root ? "#fff" : d.children ? color(range)(d.value) : "#ccc")
+              .attr("stroke", d => d === root ? "" : "black")
               //.attr("fill", d => (color(d.data.name))
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
@@ -201,11 +200,8 @@
                  .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
                  .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*2))
                  .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
-         
-
 
          resizeText();
-         
          group.call(position, root);
 
          nodeText.on("mouseover", function(d) {
@@ -231,7 +227,6 @@
                     .duration(500)		
                     .style("opacity", 0);
 	 });
-
      };
 
      function zoomin(d) {
