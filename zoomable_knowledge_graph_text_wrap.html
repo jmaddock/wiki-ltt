@@ -75,11 +75,11 @@
      d3.selectAll("text.body")
        .attr("style", `font: ${newTextHeight}px ${textStyle}`);
      d3.selectAll("tspan.body.name")
-       .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-       .attr("y", function(d){ return d.y0+newTextHeight});    // +20 to adjust position (lower)
+       .attr("x", function(d){ return d.x0+5;})    // +10 to adjust position (more right)
+       .attr("y", function(d){ return d.y0+(newTextHeight * d3.select(this).attr("line-number"))});    // +20 to adjust position (lower)
      d3.selectAll("tspan.body.value")
        .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-       .attr("y", function(d){ return d.y0+(newTextHeight*2)});    // +20 to adjust position (lower)
+       .attr("y", function(d){ return d.y0+(newTextHeight * d3.select(this).attr("line-number"))});    // +20 to adjust position (lower)
  }
 
  function getRootText(root) {
@@ -99,7 +99,7 @@
      });
  }
 
- //d3.select(window).on("resize", resizeText);
+ d3.select(window).on("resize", resizeText);
 
  var toolTip = d3.select("body").append("div")	
                  .attr("class", "tooltip")				
@@ -168,100 +168,74 @@
 
          nodes.append("text")
               .attr("class", d => d === root ? "header" : "body")
-              //.attr("style",  `font: ${textLineSpace}px ${textStyle}`)
-              //.attr("clip-path", d => (`url(#clip-${d.uid})`));
+              .attr("style",  `font: ${textLineSpace}px ${textStyle}`)
+              .attr("clip-path", d => (`url(#clip-${d.uid})`));
 
          var headerText = d3.selectAll("text.header");
          var nodeText = d3.selectAll("text.body");
 
          headerText.append("tspan")
                    .text(d => getRootText(d))
-                   .attr("style", `font: ${headerLineSpace}px ${textStyle}`)
                    .attr("font-weight", "700")
                    .attr("class", "header name")
                    .attr("x", d => d.x0+5)    
                    .attr("y", d => d.y0+headerLineSpace);
-                   
 
          headerText.append("tspan")
                    .text(d => `${d.value}`)
                    .attr("class", "header value")
                    .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
                    .attr("y", d => d.y0+(headerLineSpace*2))
-                   .attr("fill-opacity",0.7)
-                   .attr("style", `font: ${headerLineSpace}px ${textStyle}`);// +20 to adjust position (lower)
-
-
-         function wrap(d) {
-             text = d3.select(this);
-             //console.log(`rect#${d.uid}`);
-             //console.log(d3.select("rect"))
-             console.log(d3.select(`rect[id='${d.uid}']`).node().getBBox().width);
-             width = d3.select(`rect[id='${d.uid}']`).node().getBBox().width
-             //console.log(text)
-             //width = d3.select(d => `rect.${d.id}`).node.bbox().width;
-             //console.log(width);
-             
-             words = d.data.name.split(" ").reverse();
-             line = [];
-             lineNumber = 1;
-             //console.log(words);
-             span = text.append("tspan")
-                        .attr("font-weight", "400")
-                        .attr("class", "body name")
-                        .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
-                        .attr("y", d => d.y0+textLineSpace)
-                        .attr("style", `font: ${textLineSpace}px ${textStyle}`);
-             //console.log(d.x1,d.x0)
-             while (word = words.pop()) {
-                 line.push(word);
-                 span.text(line.join(" "));
-                 console.log(width, span.node().getBBox().width,span.text());
-                 //console.log(span)
-                 if (span.node().getComputedTextLength() > width) {
-                     line.pop();
-                     span.text(line.join(" "));
-                     words.push(word);
-                     line = [];
-                     lineNumber += 1;
-                     span = text.append("tspan")
-                                .attr("font-weight", "400")
-                                .attr("class", "body name")
-                                .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
-                                .attr("y", d => d.y0+(textLineSpace*lineNumber))
-                                .attr("style", `font: ${textLineSpace}px ${textStyle}`);                     
-                 }
-             } 
-             
-             /*span.text(d => `${d.data.name}` )
-                .attr("font-weight", "400")
-                .attr("class", "body name")
-                .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
-                .attr("y", d => d.y0+textLineSpace);*/    // +20 to adjust position (lower)
-         }
+                   .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
          
-         /*nodeText.append("tspan")
-            .text(d => `${d.data.name}` )
-            .attr("font-weight", "400")
-            .attr("class", "body name")
-            .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
-            .attr("y", d => d.y0+textLineSpace);    // +20 to adjust position (lower)
+         /*d3.selectAll("tspan.body.name")
+                 .data(d => d.data.name.split(" "))
+                 .enter()
+                 .append("tspan")
+                 .text(d => `${d.data.name}` )
+                 .attr("font-weight", "400")
+                 .attr("class", "body name")
+                 .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
+                 .attr("y", d => d.y0+textLineSpace);    // +20 to adjust position (lower)
 
-            nodeText.append("tspan")
-            .text(d => d.children ? `${d.value}` : '')
-            .attr("class", d => d === root ? "header value" : "body value")
-            .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-            .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*2))
-            .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
-          */
-
-
-         group.call(position, root);
-         //var drawWidth = d3.select("svg").style("width");
-         //resizeText();
-
+         nodeText.append("tspan")
+                 .text(d => d.children ? `${d.value}` : '')
+                 .attr("class", d => d === root ? "header value" : "body value")
+                 .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+                 .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*2))
+                 .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
+*/
+         
          nodeText.each(wrap);
          
+         function wrap(d) {
+             text = d3.select(this);
+             words = d.data.name.split(" ").reverse();
+             lineNumber = 1;
+             while (word = words.pop()) {
+                 span = text.append("tspan")
+                            .text(word)
+                            .attr("font-weight", "400")
+                            .attr("class", "body name")
+                            .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
+                            .attr("y", d => d.y0+(textLineSpace*lineNumber))
+                            .attr("line-number",lineNumber);
+                 lineNumber += 1;
+             }
+             
+             text.append("tspan")
+                                .text(d => d.children ? `${d.value}` : '')
+                                .attr("class", d => d === root ? "header value" : "body value")
+                                .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+                                .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
+                                .attr("fill-opacity",0.7)
+                                .attr("line-number",lineNumber);;    // +20 to adjust position (lower)
+         }
+         
+
+         resizeText();
+         
+         group.call(position, root);
 
          nodeText.on("mouseover", function(d) {
              if (d != root) {
