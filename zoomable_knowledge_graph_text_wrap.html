@@ -30,6 +30,50 @@
  //var d3 = require("d3");
 
  var colorPalette = ['#EDC7CF', '#D0CFEC', '#E1E5EE', '#E6EED6', '#F7C59F', '#E3655B', '#CFD186', '#5B8C5A', '#7EA3CC', '#FF7033', '#BE6E46', '#99708F', '#F18C7E', '#F4C3C2', '#DD99BB', '#536B79', '#2E92EF', '#E6898C', '#896C74', '#8C7D82', '#875C74', '#2877A4', '#FFA69E', '#8385C3', '#0B7884', '#CC1400', '#BBA177', '#C3423F', '#C47335', '#575761', '#EFAAC4', '#C66AC8', '#FF934F', '#FED4E7', '#0DAB8EEDC7CF', '#D0CFEC', '#E1E5EE', '#E6EED6', '#F7C59F', '#E3655B', '#CFD186', '#5B8C5A', '#7EA3CC', '#FF7033', '#BE6E46', '#99708F', '#F18C7E', '#F4C3C2', '#DD99BB', '#536B79', '#2E92EF', '#E6898C', '#896C74', '#8C7D82', '#875C74', '#2877A4', '#FFA69E', '#8385C3', '#0B7884', '#CC1400', '#BBA177', '#C3423F', '#C47335', '#575761', '#EFAAC4', '#C66AC8', '#FF934F', '#FED4E7', '#0DAB8E'];
+
+ var colorPalette2 = [
+     "#E8DCBE",
+     "#D9DFDB",
+     "#3C7244",
+     "#E4CCBD",
+     "#D8B29C",
+     "#DCA1AF",
+     "#606264",
+     "#416D93",
+     "#7DA459",
+     "#903D45",
+     "#75473E",
+     "#7BA4CA",
+     "#919392",
+     "#6A99AD",
+     "#ABC27B",
+     "#A6A6A3",
+     "#8AB4BC",
+     "#C7D297",
+     "#D4B2A6",
+     "#B6A392",
+     "#B4A134",
+     "#DDC299",
+     "#BCBAB6",
+     "#A9C3C1",
+     "#8D4E40",
+     "#428E70",
+     "#5169AE",
+     "#C6D6CE",
+     "#D36B3E",
+     "#8F8B7F",
+     "#91AAC9",
+     "#D98C64",
+     "#ABBDC9",
+     "#92AEA1",
+     "#EBD3B8",
+     "#B0473B",
+     "#BDC8B8",
+     "#B67B62",
+     "#E9E4D8",
+     "#DAB07B",
+     "#F1BA1B"
+ ]
  
  var width = 1500;
  var height = 1000;
@@ -135,7 +179,7 @@
 
      function render(group, root) {
 
-         var color = d3.scaleOrdinal().domain(data).range(colorPalette);
+         var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
 
          // use this information to add rectangles:
          var nodes = group.selectAll("g")
