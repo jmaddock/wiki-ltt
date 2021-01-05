@@ -12,6 +12,10 @@ app.get('/wrap', function (req, res) {
     res.sendFile( __dirname + "/" + "zoomable_knowledge_graph_text_wrap.html" );
 })
 
+app.get('/metrics', function (req, res) {
+    res.sendFile( __dirname + "/" + "metrics.html" );
+})
+
 app.get('/*', function (req, res) {
     res.sendFile( __dirname + "/" + "zoomable_knowledge_graph.html" );
 })
