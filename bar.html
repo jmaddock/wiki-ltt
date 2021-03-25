@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/uuid/8.3.0/uuidv4.min.js"></script>
+<script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/d3/4.13.0/d3.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<!--<script src="https://code.jquery.com/jquery-1.7.2.min.js"></script>-->
+
+
+<style>
+ div.tooltip {	
+     position: absolute;			
+     text-align: left;			
+     /*width: 60px;					
+        height: 28px;*/					
+     padding: 2px;				
+     font: 12px sans-serif;		
+     background: white;	
+     border: 0px;		
+     border-radius: 8px;			
+     pointer-events: none;			
+ }
+ 
+</style>
+
+<!-- Create a div where the graph will take place -->
+<div id="container"></div>
+
+<script>
+ //var d3 = require("d3");
+ 
+ var width = 1500;
+ var height = 1000;
+ var textLineSpace = 12;
+ var headerLineSpace = 16;
+ var headerHeight = (headerLineSpace * 2) + (headerLineSpace * .5); 
+ var textStyle = "sans-serif";
+ var format = d3.format(",d");
+ //var color = d3.scaleOrdinal(d3.schemeCategory10)
+ var layout = "treemapSquarify";
+ var datapath = "joined_metrics_small_1-5-21.json";
+ var padding = 1;
+
+ // set the dimensions and margins of the graph
+ var margin = {top: 10, right: 10, bottom: 10, left: 10},
+     width = width - margin.left - margin.right,
+     height = height - margin.top - margin.bottom;
+
+ function color(range) {
+     return d3.scaleSequential(d3['interpolateGreys']).domain(range);
+ }
+ 
+ function tile(node, x0, y0, x1, y1) {
+     d3.treemapBinary(node, 0, 0, width, height);
+     for (const child of node.children) {
+         child.x0 = x0 + child.x0 / width * (x1 - x0);
+         child.x1 = x0 + child.x1 / width * (x1 - x0);
+         child.y0 = y0 + child.y0 / height * (y1 - y0);
+         child.y1 = y0 + child.y1 / height * (y1 - y0);
+     }
+ }
+
+ function resizeText() {
+     const newWidth = d3.select("svg").style("width");
+     const newHeaderHeight = headerLineSpace * (width / parseInt(newWidth));
+     const newTextHeight = textLineSpace * (width / parseInt(newWidth));
+     
+     d3.selectAll("text.header")
+       .attr("style", `font: ${newHeaderHeight}px ${textStyle}`);
+     d3.selectAll("tspan.header.name")
+       .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+       .attr("y", function(d){ return d.y0+newHeaderHeight});    // +20 to adjust position (lower)
+     d3.selectAll("tspan.header.value")
+       .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+       .attr("y", function(d){ return d.y0+(newHeaderHeight*2)});    // +20 to adjust position (lower)
+
+     d3.selectAll("text.body")
+       .attr("style", `font: ${newTextHeight}px ${textStyle}`);
+     d3.selectAll("tspan.body.name")
+       .attr("x", function(d){ return d.x0+5;})    // +10 to adjust position (more right)
+       .attr("y", function(d){ return d.y0+(newTextHeight * d3.select(this).attr("line-number"))});    // +20 to adjust position (lower)
+     d3.selectAll("tspan.body.value")
+       .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+       .attr("y", function(d){ return d.y0+(newTextHeight * d3.select(this).attr("line-number"))});    // +20 to adjust position (lower)
+ }
+
+ function getRootText(root) {
+     crumb = "";
+     do {
+         crumb = `${root.data.name} : ${crumb}`;
+         root = root.parent ? root.parent : null;
+     } while (root);
+     return crumb;
+ }
+
+ function wrapText(d) {
+     d.append("tspan")
+      .text(d.data.name);
+     d.each(function (d) {
+         console.log(d);
+     });
+ }
+
+ d3.select(window).on("resize", resizeText);
+
+ var toolTip = d3.select("body").append("div")	
+                 .attr("class", "tooltip")				
+                 .style("opacity", 0);
+
+ // read json data
+ d3.json(datapath, function(data) {
+
+     // Give the data to this cluster layout:
+     var root = d3.hierarchy(data)
+                  .sum(function(d){ return d.value})
+                  .sort((a, b) => b.value - a.value); // Here the size of each leave is given in the 'value' field in input data
+
+     var children = root.children.concat(root);
+
+     // append the svg object to the body of the page
+     var svg = d3.select("#container")
+                 .append("svg")
+                 .attr("viewBox", [-10, -headerHeight - 10, width + 20, height + headerHeight + 20])
+                 .attr("style", `max-width: ${width}px`);
+
+     
+     var x = d3.scaleBand()
+               .domain(children.map(function(d) { return d.data.name; }))
+               .range([margin.left, width - margin.right])
+               .padding(0.1);
+
+     //x.domain(d3.extent(children, function(d) { return d.name; }));
+
+     var y = d3.scaleLinear()
+               .domain([0, d3.max(children, d => d.value)]).nice()
+               .range([height - margin.bottom, margin.top]);
+
+     var xAxis = d3.axisBottom(x);
+
+     var yAxis = d3.axisLeft(y);
+
+     svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+     svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis);
+
+
+     // Then d3.treemap computes the position of each element of the hierarchy
+     var treemapLayout = d3.treemap()
+                           .tile(tile);                  
+
+     //treemapLayout(root);
+
+     console.log(d3.range(children.length));
+     console.log(children[0]);
+     console.log(children.map(function(d) { return d.data.name; }));
+
+     svg.selectAll("bar")
+        .data(children)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function(d) { return x(d.data.name); })
+        .attr("width", x.bandwidth())
+        .attr("y", function(d) { return y(d.value); })
+        .attr("height",  d => y(0) - y(d.value));
+
+     var group = svg.append("g");
+
+     render(group, root);
+
+     function render(group, root) {
+
+         //var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
+
+         // use this information to add rectangles:
+         /*
+         var nodes = group.selectAll("g")
+                          .data(root.children.concat(root))
+                          .enter()
+                          .append("g");
+
+         nodes.filter(d => d === root ? d.parent : d.children)
+              .attr("cursor", "pointer")
+              .on("click", d => d === root ? zoomout(root) : zoomin(d));
+
+         var range = d3.extent(nodes.data(), d => d === root ? null : d.children ? d.data.mean_quality : d.data.quality_weighted_sum);
+
+         nodes.append("rect")
+              .attr('x', function (d) { return d.x0; })
+              .attr('y', function (d) { return d.y0; })
+              .attr('width', function (d) { return d.x1 - d.x0; })
+              .attr('height', function (d) { return d.y1 - d.y0; })
+              .attr("fill", d => d === root ? "#fff" : d.children ? color(range)(d.data.mean_quality) : color(range)(d.data.quality_weighted_sum))
+              .attr("stroke", d => d === root ? "" : "black")
+              .attr("fill-opacity", 0.6)
+              .attr("id", d => (d.uid = uuidv4()));
+
+         nodes.append("clipPath")
+              .attr("id", d => (`clip-${d.uid}`))
+              .append("use")
+              .attr("xlink:href", d => `#${d.uid}`);
+
+         getRootText(root);
+
+         nodes.append("text")
+              .attr("class", d => d === root ? "header" : "body")
+              .attr("style",  `font: ${textLineSpace}px ${textStyle}`)
+              .attr("clip-path", d => (`url(#clip-${d.uid})`));
+
+         var headerText = d3.selectAll("text.header");
+         var nodeText = d3.selectAll("text.body");
+
+         headerText.append("tspan")
+                   .text(d => getRootText(d))
+                   .attr("font-weight", "700")
+                   .attr("class", "header name")
+                   .attr("x", d => d.x0+5)    
+                   .attr("y", d => d.y0+headerLineSpace);
+
+         headerText.append("tspan")
+                   .text(d => `${d.value}`)
+                   .attr("class", "header value")
+                   .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
+                   .attr("y", d => d.y0+(headerLineSpace*2))
+                   .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
+                  
+         nodeText.each(wrap);
+         
+         function wrap(d) {
+             text = d3.select(this);
+             words = d.data.name.split(" ").reverse();
+             lineNumber = 1;
+             while (word = words.pop()) {
+                 span = text.append("tspan")
+                            .text(word)
+                            .attr("font-weight", "400")
+                            .attr("class", "body name")
+                            .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
+                            .attr("y", d => d.y0+(textLineSpace*lineNumber))
+                            .attr("line-number",lineNumber);
+                 lineNumber += 1;
+             }
+             
+             text.append("tspan")
+                                .text(d => d.children ? `Number of Articles: ${d.value}` : '')
+                                .attr("class", d => d === root ? "header value" : "body value")
+                                .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+                                .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
+                                .attr("fill-opacity",0.7)
+                                .attr("line-number",lineNumber);// +20 to adjust position (lower)
+
+             text.append("tspan")
+                 .text(d => d.children ? `Mean Quality: ${d.data.mean_quality}` : `Quality: ${d.data.quality_weighted_sum}`)
+                 .attr("class", d => d === root ? "header value" : "body value")
+                 .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+                 .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
+                 .attr("fill-opacity",0.7)
+                 .attr("line-number",d => d.children ? lineNumber+1 : lineNumber);    // +20 to adjust position (lower)
+         }
+         
+
+         resizeText();
+         
+         group.call(position, root);
+
+         nodeText.on("mouseover", function(d) {
+             if (d != root) {
+	         toolTip.transition()		
+                        .duration(200)		
+                        .style("opacity", .9);
+                 
+		 if (d.data.children) {
+                     toolTip.html(`${d.data.name}<br/>${d.value}`)	
+                            .style("left", (d3.event.pageX) + "px")		
+                            .style("top", (d3.event.pageY - 28) + "px");
+                 } else {
+                     toolTip.html(`${d.data.name}`)	
+                            .style("left", (d3.event.pageX) + "px")		
+                            .style("top", (d3.event.pageY - 28) + "px");
+                 }
+             }
+         });
+
+         nodeText.on("mouseout", function(d) {		
+             toolTip.transition()		
+                    .duration(500)		
+                    .style("opacity", 0);
+	 });
+         */
+
+     };
+
+     function zoomin(d) {
+         var group0 = group.attr("pointer-events", "none");
+         var group1 = group = svg.append("g").call(render, d);
+
+         x.domain([d.x0, d.x1]);
+         y.domain([d.y0, d.y1]);
+
+         svg.transition()
+            .duration(750)
+            .call(t => group0.transition(t).remove()
+                             .call(position, d.parent))
+            .call(t => group1.transition(t)
+                             .attrTween("opacity", () => d3.interpolate(0, 1))
+                             .call(position, d));
+     }
+
+     function zoomout(d) {
+         const group0 = group.attr("pointer-events", "none");
+         const group1 = group = svg.insert("g", "*").call(render, d.parent);
+
+         x.domain([d.parent.x0, d.parent.x1]);
+         y.domain([d.parent.y0, d.parent.y1]);
+
+         svg.transition()
+            .duration(750)
+            .call(t => group0.transition(t).remove()
+                             .attrTween("opacity", () => d3.interpolate(1, 0))
+                             .call(position, d))
+            .call(t => group1.transition(t)
+                             .call(position, d.parent));
+     }
+
+     function position(group, root) {
+         group.selectAll("g")
+              .attr("transform", d => d === root ? `translate(0,${-headerHeight})` : `translate(${x(d.x0)},${y(d.y0)})`)
+              .select("rect")
+              .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
+              .attr("height", d => d === root ? headerHeight: y(d.y1) - y(d.y0));
+     }
+
+     
+     
+ })
+</script>

@@ -16,6 +16,10 @@ app.get('/metrics', function (req, res) {
     res.sendFile( __dirname + "/" + "metrics.html" );
 })
 
+app.get('/bar', function (req, res) {
+    res.sendFile( __dirname + "/" + "bar.html" );
+})
+
 app.get('/*', function (req, res) {
     res.sendFile( __dirname + "/" + "zoomable_knowledge_graph.html" );
 })
