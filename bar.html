@@ -21,6 +21,10 @@
      border-radius: 8px;			
      pointer-events: none;			
  }
+
+ .x .tick {
+     visibility:hidden;
+ }
  
 </style>
 
@@ -28,6 +32,49 @@
 <div id="container"></div>
 
 <script>
+ var colorPalette2 = [
+     "#E8DCBE",
+     "#D9DFDB",
+     "#3C7244",
+     "#E4CCBD",
+     "#D8B29C",
+     "#DCA1AF",
+     "#606264",
+     "#416D93",
+     "#7DA459",
+     "#903D45",
+     "#75473E",
+     "#7BA4CA",
+     "#919392",
+     "#6A99AD",
+     "#ABC27B",
+     "#A6A6A3",
+     "#8AB4BC",
+     "#C7D297",
+     "#D4B2A6",
+     "#B6A392",
+     "#B4A134",
+     "#DDC299",
+     "#BCBAB6",
+     "#A9C3C1",
+     "#8D4E40",
+     "#428E70",
+     "#5169AE",
+     "#C6D6CE",
+     "#D36B3E",
+     "#8F8B7F",
+     "#91AAC9",
+     "#D98C64",
+     "#ABBDC9",
+     "#92AEA1",
+     "#EBD3B8",
+     "#B0473B",
+     "#BDC8B8",
+     "#B67B62",
+     "#E9E4D8",
+     "#DAB07B",
+     "#F1BA1B"
+ ]
  //var d3 = require("d3");
  
  var width = 1500;
@@ -39,7 +86,7 @@
  var format = d3.format(",d");
  //var color = d3.scaleOrdinal(d3.schemeCategory10)
  var layout = "treemapSquarify";
- var datapath = "joined_metrics_small_1-5-21.json";
+ var datapath = "edcast_taxo_8-5-20.json";//"joined_metrics_1-5-21.json";
  var padding = 1;
 
  // set the dimensions and margins of the graph
@@ -115,65 +162,70 @@
      var root = d3.hierarchy(data)
                   .sum(function(d){ return d.value})
                   .sort((a, b) => b.value - a.value); // Here the size of each leave is given in the 'value' field in input data
-
-     var children = root.children.concat(root);
-
      // append the svg object to the body of the page
      var svg = d3.select("#container")
                  .append("svg")
                  .attr("viewBox", [-10, -headerHeight - 10, width + 20, height + headerHeight + 20])
                  .attr("style", `max-width: ${width}px`);
 
-     
-     var x = d3.scaleBand()
-               .domain(children.map(function(d) { return d.data.name; }))
-               .range([margin.left, width - margin.right])
-               .padding(0.1);
-
-     //x.domain(d3.extent(children, function(d) { return d.name; }));
-
-     var y = d3.scaleLinear()
-               .domain([0, d3.max(children, d => d.value)]).nice()
-               .range([height - margin.bottom, margin.top]);
-
-     var xAxis = d3.axisBottom(x);
-
-     var yAxis = d3.axisLeft(y);
-
-     svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-
-     svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis);
-
-
-     // Then d3.treemap computes the position of each element of the hierarchy
-     var treemapLayout = d3.treemap()
-                           .tile(tile);                  
-
-     //treemapLayout(root);
-
-     console.log(d3.range(children.length));
-     console.log(children[0]);
-     console.log(children.map(function(d) { return d.data.name; }));
-
-     svg.selectAll("bar")
-        .data(children)
-        .enter().append("rect")
-        .attr("class", "bar")
-        .attr("x", function(d) { return x(d.data.name); })
-        .attr("width", x.bandwidth())
-        .attr("y", function(d) { return y(d.value); })
-        .attr("height",  d => y(0) - y(d.value));
-
      var group = svg.append("g");
-
+     
      render(group, root);
 
      function render(group, root) {
+
+         var children = root.children.map(x => x.children).flat();
+         var color = d3.scaleOrdinal().domain(children).range(colorPalette2);
+         
+         var x = d3.scaleBand()
+                   .domain(children.map(function(d) { return d.data.name; }))
+                   .range([margin.left+50, width - margin.right])
+                   .padding(0.1);
+
+         var y = d3.scaleLinear()
+                   .domain([0, d3.max(children, d => d.value)]).nice()
+                   .range([height - margin.bottom, margin.top]);
+
+         var xAxis = d3.axisBottom(x);
+
+         var yAxis = d3.axisLeft(y);
+
+         group.append("g")
+              .attr("class", "x axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+         group.append("g")
+              .attr("class", "y axis")
+              .attr("transform", "translate(50,0)")
+              .style("font", `${headerLineSpace}px ${textStyle}`)
+              .call(yAxis);
+
+
+         // Then d3.treemap computes the position of each element of the hierarchy
+         var treemapLayout = d3.treemap()
+                               .tile(tile);                  
+
+         //treemapLayout(root);
+
+         //console.log(d3.range(children.length));
+         //console.log(children[0].parent.data.name);
+         //console.log(children.map(function(d) { return d.data.name; }));
+
+         var bars = group.selectAll("bar")
+                         .data(children)
+                         .enter().append("rect")
+                         .attr("class", "bar")
+                         .attr("x", function(d) { return x(d.data.name); })
+                         .attr("width", x.bandwidth())
+                         .attr("y", function(d) { return y(d.value); })
+                         .attr("height",  d => y(0) - y(d.value))
+                         .attr("fill", d => (color(d.parent.data.name)));
+
+         bars.filter(d => d === root ? d.parent : d.children)
+             .attr("cursor", "pointer")
+             .on("click", d => d === root ? zoomout(root) : zoomin(d.parent));
+
 
          //var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
 
@@ -297,10 +349,11 @@
 
      function zoomin(d) {
          var group0 = group.attr("pointer-events", "none");
+         console.log(group0);
          var group1 = group = svg.append("g").call(render, d);
 
-         x.domain([d.x0, d.x1]);
-         y.domain([d.y0, d.y1]);
+         //x.domain([d.x0, d.x1]);
+         //y.domain([d.y0, d.y1]);
 
          svg.transition()
             .duration(750)
