@@ -74,7 +74,7 @@
      "#E9E4D8",
      "#DAB07B",
      "#F1BA1B"
- ]
+ ];
  //var d3 = require("d3");
  
  var width = 1500;
@@ -168,27 +168,38 @@
                  .attr("viewBox", [-10, -headerHeight - 10, width + 20, height + headerHeight + 20])
                  .attr("style", `max-width: ${width}px`);
 
-     var group = svg.append("g");
+     var x = d3.scaleLinear().rangeRound([0, width]);
+     var y = d3.scaleLinear().rangeRound([0, height/2]);
+
+     var treemapLayout = d3.treemap()
+                           .tile(tile);                  
+
+     treemapLayout(root);
+
+     var group = svg.append("g")
+                    .attr("name", "canvas");
      
      render(group, root);
 
      function render(group, root) {
 
-         var children = root.children.map(x => x.children).flat();
-         var color = d3.scaleOrdinal().domain(children).range(colorPalette2);
+         var color = d3.scaleOrdinal().domain(root.children).range(colorPalette2);
          
-         var x = d3.scaleBand()
-                   .domain(children.map(function(d) { return d.data.name; }))
-                   .range([margin.left+50, width - margin.right])
-                   .padding(0.1);
+         var children = root.children.map(x => x.children).flat();
+         
+         
+         var x_bar = d3.scaleBand()
+                       .domain(children.map(function(d) { return d.data.name; }))
+                       .range([margin.left+50, width - margin.right])
+                       .padding(0.1);
 
-         var y = d3.scaleLinear()
-                   .domain([0, d3.max(children, d => d.value)]).nice()
-                   .range([height - margin.bottom, margin.top]);
+         var y_bar = d3.scaleLinear()
+                       .domain([0, d3.max(children, d => d.value)]).nice()
+                       .range([height - margin.bottom, (height/2)+margin.top]);
 
-         var xAxis = d3.axisBottom(x);
+         var xAxis = d3.axisBottom(x_bar);
 
-         var yAxis = d3.axisLeft(y);
+         var yAxis = d3.axisLeft(y_bar);
 
          group.append("g")
               .attr("class", "x axis")
@@ -201,53 +212,43 @@
               .style("font", `${headerLineSpace}px ${textStyle}`)
               .call(yAxis);
 
-
-         // Then d3.treemap computes the position of each element of the hierarchy
-         var treemapLayout = d3.treemap()
-                               .tile(tile);                  
-
-         //treemapLayout(root);
-
-         //console.log(d3.range(children.length));
-         //console.log(children[0].parent.data.name);
-         //console.log(children.map(function(d) { return d.data.name; }));
-
          var bars = group.selectAll("bar")
                          .data(children)
                          .enter().append("rect")
                          .attr("class", "bar")
-                         .attr("x", function(d) { return x(d.data.name); })
-                         .attr("width", x.bandwidth())
-                         .attr("y", function(d) { return y(d.value); })
-                         .attr("height",  d => y(0) - y(d.value))
+                         .attr("x", function(d) { return x_bar(d.data.name); })
+                         .attr("width", x_bar.bandwidth())
+                         .attr("y", function(d) { return y_bar(d.value); })
+                         .attr("height",  d => y_bar(0) - y_bar(d.value))
                          .attr("fill", d => (color(d.parent.data.name)));
 
          bars.filter(d => d === root ? d.parent : d.children)
              .attr("cursor", "pointer")
              .on("click", d => d === root ? zoomout(root) : zoomin(d.parent));
-
-
+         
+         // Then d3.treemap computes the position of each element of the hierarchy
+         
          //var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
 
          // use this information to add rectangles:
-         /*
-         var nodes = group.selectAll("g")
+         var nodes = group.selectAll("g#canvas")
                           .data(root.children.concat(root))
                           .enter()
-                          .append("g");
+                          .append("g")
+                          .attr("class","node");
 
          nodes.filter(d => d === root ? d.parent : d.children)
               .attr("cursor", "pointer")
               .on("click", d => d === root ? zoomout(root) : zoomin(d));
 
-         var range = d3.extent(nodes.data(), d => d === root ? null : d.children ? d.data.mean_quality : d.data.quality_weighted_sum);
+         //var range = d3.extent(nodes.data(), d => d === root ? null : d.children ? d.data.mean_quality : d.data.quality_weighted_sum);
 
          nodes.append("rect")
               .attr('x', function (d) { return d.x0; })
               .attr('y', function (d) { return d.y0; })
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
-              .attr("fill", d => d === root ? "#fff" : d.children ? color(range)(d.data.mean_quality) : color(range)(d.data.quality_weighted_sum))
+              .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
               .attr("stroke", d => d === root ? "" : "black")
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
@@ -343,8 +344,6 @@
                     .duration(500)		
                     .style("opacity", 0);
 	 });
-         */
-
      };
 
      function zoomin(d) {
@@ -352,8 +351,8 @@
          console.log(group0);
          var group1 = group = svg.append("g").call(render, d);
 
-         //x.domain([d.x0, d.x1]);
-         //y.domain([d.y0, d.y1]);
+         x.domain([d.x0, d.x1]);
+         y.domain([d.y0, d.y1]);
 
          svg.transition()
             .duration(750)
@@ -381,7 +380,7 @@
      }
 
      function position(group, root) {
-         group.selectAll("g")
+         group.selectAll("g.node")
               .attr("transform", d => d === root ? `translate(0,${-headerHeight})` : `translate(${x(d.x0)},${y(d.y0)})`)
               .select("rect")
               .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
