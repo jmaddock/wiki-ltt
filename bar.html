@@ -86,7 +86,7 @@
  var format = d3.format(",d");
  //var color = d3.scaleOrdinal(d3.schemeCategory10)
  var layout = "treemapSquarify";
- var datapath = "edcast_taxo_8-5-20.json";//"joined_metrics_1-5-21.json";
+ var datapath = "edcast_taxo_metrics_03-26-21.json";//"joined_metrics_1-5-21.json";
  var padding = 1;
 
  // set the dimensions and margins of the graph
@@ -161,7 +161,7 @@
      // Give the data to this cluster layout:
      var root = d3.hierarchy(data)
                   .sum(function(d){ return d.value})
-                  .sort((a, b) => b.value - a.value); // Here the size of each leave is given in the 'value' field in input data
+                  .sort((a, b) => b.data.weighted_sum - a.data.weighted_sum); // Here the size of each leave is given in the 'value' field in input data
      // append the svg object to the body of the page
      var svg = d3.select("#container")
                  .append("svg")
@@ -194,7 +194,7 @@
                        .padding(0.1);
 
          var y_bar = d3.scaleLinear()
-                       .domain([0, d3.max(children, d => d.value)]).nice()
+                       .domain([0, d3.max(children, d => d.data.weighted_sum)]).nice()
                        .range([height - margin.bottom, (height/2)+margin.top]);
 
          var xAxis = d3.axisBottom(x_bar);
@@ -218,8 +218,8 @@
                          .attr("class", "bar")
                          .attr("x", function(d) { return x_bar(d.data.name); })
                          .attr("width", x_bar.bandwidth())
-                         .attr("y", function(d) { return y_bar(d.value); })
-                         .attr("height",  d => y_bar(0) - y_bar(d.value))
+                         .attr("y", function(d) { return y_bar(d.data.weighted_sum); })
+                         .attr("height",  d => y_bar(0) - y_bar(d.data.weighted_sum))
                          .attr("fill", d => (color(d.parent.data.name)));
 
          bars.filter(d => d === root ? d.parent : d.children)
@@ -308,7 +308,7 @@
                                 .attr("line-number",lineNumber);// +20 to adjust position (lower)
 
              text.append("tspan")
-                 .text(d => d.children ? `Mean Quality: ${d.data.mean_quality}` : `Quality: ${d.data.quality_weighted_sum}`)
+                 .text(d => d.children ? `Mean Quality: ${d.data.weighted_sum}` : `Quality: ${d.data.weighted_sum}`)
                  .attr("class", d => d === root ? "header value" : "body value")
                  .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
                  .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
