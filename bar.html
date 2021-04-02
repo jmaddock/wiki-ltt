@@ -29,7 +29,8 @@
 </style>
 
 <!-- Create a div where the graph will take place -->
-<div id="container"></div>
+<div id="treemap-container"></div>
+<div id="bar-container"></div>
 
 <script>
  var colorPalette2 = [
@@ -75,10 +76,17 @@
      "#DAB07B",
      "#F1BA1B"
  ];
- //var d3 = require("d3");
+
+ var metrics = [
+     "weighted_sum",
+     "num_revisions",
+     "num_unique_registered_users",
+     "monthly_pageviews"
+ ];
  
  var width = 1500;
  var height = 1000;
+ 
  var textLineSpace = 12;
  var headerLineSpace = 16;
  var headerHeight = (headerLineSpace * 2) + (headerLineSpace * .5); 
@@ -160,14 +168,15 @@
 
      // Give the data to this cluster layout:
      var root = d3.hierarchy(data)
-                  .sum(function(d){ return d.value})
+                  .sum(d => d.value)
                   .sort((a, b) => b.data.weighted_sum - a.data.weighted_sum); // Here the size of each leave is given in the 'value' field in input data
      // append the svg object to the body of the page
-     var svg = d3.select("#container")
+     var treemapSVG = d3.select("#treemap-container")
                  .append("svg")
-                 .attr("viewBox", [-10, -headerHeight - 10, width + 20, height + headerHeight + 20])
+                 .attr("viewBox", [-margin.left, -headerHeight -margin.top, width + margin.right + margin.left, height/2 + headerHeight + margin.top + margin.bottom])
                  .attr("style", `max-width: ${width}px`);
 
+     var color = d3.scaleOrdinal().domain(root.children).range(colorPalette2);
      var x = d3.scaleLinear().rangeRound([0, width]);
      var y = d3.scaleLinear().rangeRound([0, height/2]);
 
@@ -176,62 +185,97 @@
 
      treemapLayout(root);
 
-     var group = svg.append("g")
-                    .attr("name", "canvas");
+     var group = treemapSVG.append("g")
+                           .attr("id", "canvas-treeMap");
+
+     
+                           //.attr("transform", "translate(0," + margin.top + ")");
+
      
      render(group, root);
 
-     function render(group, root) {
+     var barSVGList = []
+     var barHeight = ((height/2)/metrics.length);
+     metrics.forEach(function(metric) {
+         var barContainer = d3.select("#bar-container")
+                              .append("div")
+                              .attr("id",`bar-container-${metric}`)
 
-         var color = d3.scaleOrdinal().domain(root.children).range(colorPalette2);
+         var barSVG = barContainer.append("svg")
+                                  .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom])
+                                  .attr("style", `max-width: ${width}px`);
+
+         var barCanvas = barSVG.append("g")
+                               .attr("class","canvas bar")
+                               .attr("id",`${metric}`);
+
+         barSVGList.push(barSVG);
+         renderBarGraph(barCanvas, root, metric, barHeight); 
+     });
+
+     function renderBarGraph(canvas, root, metric, height) {
+
+         //var children = root.leaves();
          
          var children = root.children.map(x => x.children).flat();
          
-         
          var x_bar = d3.scaleBand()
                        .domain(children.map(function(d) { return d.data.name; }))
-                       .range([margin.left+50, width - margin.right])
+                       .range([margin.left+50, width])
                        .padding(0.1);
 
          var y_bar = d3.scaleLinear()
-                       .domain([0, d3.max(children, d => d.data.weighted_sum)]).nice()
-                       .range([height - margin.bottom, (height/2)+margin.top]);
+                       .domain([0, d3.max(children, d => d.data[metric])]).nice()
+                       .range([(height - margin.top - margin.bottom), 0]);
 
          var xAxis = d3.axisBottom(x_bar);
 
-         var yAxis = d3.axisLeft(y_bar);
+         var yAxis = d3.axisLeft(y_bar)
+                       .ticks(5);
 
-         group.append("g")
-              .attr("class", "x axis")
-              .attr("transform", "translate(0," + height + ")")
-              .call(xAxis);
+         canvas.append("g")
+                   .attr("class", "x axis")
+                   .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+                   .call(xAxis);
 
-         group.append("g")
-              .attr("class", "y axis")
-              .attr("transform", "translate(50,0)")
-              .style("font", `${headerLineSpace}px ${textStyle}`)
-              .call(yAxis);
+         canvas.append("g")
+                   .attr("class", "y axis")
+                   .attr("transform", "translate(50,0)")
+                   .style("font", `${headerLineSpace}px ${textStyle}`)
+                   .call(yAxis);
 
-         var bars = group.selectAll("bar")
-                         .data(children)
-                         .enter().append("rect")
-                         .attr("class", "bar")
-                         .attr("x", function(d) { return x_bar(d.data.name); })
-                         .attr("width", x_bar.bandwidth())
-                         .attr("y", function(d) { return y_bar(d.data.weighted_sum); })
-                         .attr("height",  d => y_bar(0) - y_bar(d.data.weighted_sum))
-                         .attr("fill", d => (color(d.parent.data.name)));
+         var bars = canvas.selectAll("bar")
+                              .data(children)
+                              .enter().append("rect")
+                              .attr("class", "bar")
+                              .attr("x", function(d) { return x_bar(d.data.name); })
+                              .attr("width", x_bar.bandwidth())
+                              .attr("y", function(d) { return y_bar(d.data[metric]); })
+                              .attr("height",  d => y_bar(0) - y_bar(d.data[metric]))
+                              .attr("fill", d => (color(d.parent.data.name)))
+                              .attr("fill-opacity", 0.6);
 
          bars.filter(d => d === root ? d.parent : d.children)
              .attr("cursor", "pointer")
              .on("click", d => d === root ? zoomout(root) : zoomin(d.parent));
-         
+
+         canvas.append("text")
+               .attr("class", "bar-title")
+               .attr("style",  `font: ${headerLineSpace}px ${textStyle}`)
+               .attr("x", (width / 2))             
+               .attr("y", (margin.top))
+               .attr("text-anchor", "middle")  
+               .text(`${metric}`);
+     }
+
+     function render(group, root) {
+         console.log(root);
          // Then d3.treemap computes the position of each element of the hierarchy
          
          //var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
 
          // use this information to add rectangles:
-         var nodes = group.selectAll("g#canvas")
+         var nodes = group.selectAll("g#canvas-treeMap")
                           .data(root.children.concat(root))
                           .enter()
                           .append("g")
@@ -249,7 +293,7 @@
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
               .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              .attr("stroke", d => d === root ? "" : "black")
+              //.attr("stroke", d => d === root ? "" : "black")
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
 
@@ -285,6 +329,7 @@
          nodeText.each(wrap);
          
          function wrap(d) {
+             console.log(d);
              text = d3.select(this);
              words = d.data.name.split(" ").reverse();
              lineNumber = 1;
@@ -308,7 +353,7 @@
                                 .attr("line-number",lineNumber);// +20 to adjust position (lower)
 
              text.append("tspan")
-                 .text(d => d.children ? `Mean Quality: ${d.data.weighted_sum}` : `Quality: ${d.data.weighted_sum}`)
+                 .text(d => d.children ? `Mean Quality: ${d.data['weighted_sum']}` : `Quality: ${d.data['weighted_sum']}`)
                  .attr("class", d => d === root ? "header value" : "body value")
                  .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
                  .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
@@ -348,13 +393,12 @@
 
      function zoomin(d) {
          var group0 = group.attr("pointer-events", "none");
-         console.log(group0);
-         var group1 = group = svg.append("g").call(render, d);
+         var group1 = group = treemapSVG.append("g").attr("id","canvas-treeMap").call(render, d);
 
          x.domain([d.x0, d.x1]);
          y.domain([d.y0, d.y1]);
 
-         svg.transition()
+         treemapSVG.transition()
             .duration(750)
             .call(t => group0.transition(t).remove()
                              .call(position, d.parent))
@@ -365,12 +409,12 @@
 
      function zoomout(d) {
          const group0 = group.attr("pointer-events", "none");
-         const group1 = group = svg.insert("g", "*").call(render, d.parent);
+         const group1 = group = treemapSVG.insert("g", "*").attr("id","canvas-treeMap").call(render, d.parent);
 
          x.domain([d.parent.x0, d.parent.x1]);
          y.domain([d.parent.y0, d.parent.y1]);
 
-         svg.transition()
+         treemapSVG.transition()
             .duration(750)
             .call(t => group0.transition(t).remove()
                              .attrTween("opacity", () => d3.interpolate(1, 0))
