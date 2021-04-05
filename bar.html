@@ -77,17 +77,18 @@
      "#F1BA1B"
  ];
 
- var metrics = [
-     "weighted_sum",
-     "num_revisions",
-     "num_unique_registered_users",
-     "monthly_pageviews"
- ];
+ var metrics = {
+     "weighted_sum":"Quality",
+     "num_revisions":"Revisions",
+     "num_unique_registered_users":"Unique Registered Editors",
+     "monthly_pageviews":"Monthly Pageviews"
+ };
  
  var width = 1500;
  var height = 1000;
  
- var textLineSpace = 12;
+ var metricLineSpace = 12;
+ var textLineSpace = 16;
  var headerLineSpace = 16;
  var headerHeight = (headerLineSpace * 2) + (headerLineSpace * .5); 
  var textStyle = "sans-serif";
@@ -120,6 +121,7 @@
      const newWidth = d3.select("svg").style("width");
      const newHeaderHeight = headerLineSpace * (width / parseInt(newWidth));
      const newTextHeight = textLineSpace * (width / parseInt(newWidth));
+     const newMetricHeight = metricLineSpace * (width / parseInt(newWidth));
      
      d3.selectAll("text.header")
        .attr("style", `font: ${newHeaderHeight}px ${textStyle}`);
@@ -138,6 +140,7 @@
      d3.selectAll("tspan.body.value")
        .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
        .attr("y", function(d){ return d.y0+(newTextHeight * d3.select(this).attr("line-number"))});    // +20 to adjust position (lower)
+
  }
 
  function getRootText(root) {
@@ -153,7 +156,7 @@
      d.append("tspan")
       .text(d.data.name);
      d.each(function (d) {
-         console.log(d);
+         
      });
  }
 
@@ -194,57 +197,62 @@
      
      render(group, root);
 
-     var barSVGList = []
-     var barHeight = ((height/2)/metrics.length);
-     metrics.forEach(function(metric) {
+     var barHeight = ((height/2)/Object.keys(metrics).length);
+     for (var metric in metrics) {
          var barContainer = d3.select("#bar-container")
                               .append("div")
-                              .attr("id",`bar-container-${metric}`)
+                              .attr("class",`bar-container`)
+                              .attr("id",`${metric}`);
 
          var barSVG = barContainer.append("svg")
+                                  .attr("class","bar-svg")
+                                  .attr("id",`${metric}`)
                                   .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom])
                                   .attr("style", `max-width: ${width}px`);
 
          var barCanvas = barSVG.append("g")
-                               .attr("class","canvas bar")
+                               .attr("class","bar-canvas")
                                .attr("id",`${metric}`);
 
-         barSVGList.push(barSVG);
-         renderBarGraph(barCanvas, root, metric, barHeight); 
-     });
+     };
 
-     function renderBarGraph(canvas, root, metric, height) {
+     d3.selectAll("g.bar-canvas")
+       .call(renderBarGraph, root, barHeight);
 
-         //var children = root.leaves();
-         
-         var children = root.children.map(x => x.children).flat();
-         
-         var x_bar = d3.scaleBand()
-                       .domain(children.map(function(d) { return d.data.name; }))
-                       .range([margin.left+50, width])
-                       .padding(0.1);
+     function renderBarGraph(canvas_list, root, height) {
+         for (var element of canvas_list.nodes()) {
+             metric = element.id;
+             canvas = d3.select(element);
+             //var children = root.leaves();
+             
+             var children = root.children.map(x => x.children).flat();
+             
+             var x_bar = d3.scaleBand()
+                           .domain(children.map(function(d) { return d.data.name; }))
+                           .range([margin.left+50, width])
+                           .padding(0.1);
 
-         var y_bar = d3.scaleLinear()
-                       .domain([0, d3.max(children, d => d.data[metric])]).nice()
-                       .range([(height - margin.top - margin.bottom), 0]);
+             var y_bar = d3.scaleLinear()
+                           .domain([0, d3.max(children, d => d.data[metric])]).nice()
+                           .range([(height - margin.top - margin.bottom), 0]);
 
-         var xAxis = d3.axisBottom(x_bar);
+             var xAxis = d3.axisBottom(x_bar);
 
-         var yAxis = d3.axisLeft(y_bar)
-                       .ticks(5);
+             var yAxis = d3.axisLeft(y_bar)
+                           .ticks(5);
 
-         canvas.append("g")
+             canvas.append("g")
                    .attr("class", "x axis")
                    .attr("transform", "translate(0," + (height - margin.bottom) + ")")
                    .call(xAxis);
 
-         canvas.append("g")
+             canvas.append("g")
                    .attr("class", "y axis")
                    .attr("transform", "translate(50,0)")
                    .style("font", `${headerLineSpace}px ${textStyle}`)
                    .call(yAxis);
 
-         var bars = canvas.selectAll("bar")
+             var bars = canvas.selectAll("bar")
                               .data(children)
                               .enter().append("rect")
                               .attr("class", "bar")
@@ -255,21 +263,22 @@
                               .attr("fill", d => (color(d.parent.data.name)))
                               .attr("fill-opacity", 0.6);
 
-         bars.filter(d => d === root ? d.parent : d.children)
-             .attr("cursor", "pointer")
-             .on("click", d => d === root ? zoomout(root) : zoomin(d.parent));
+             bars.filter(d => d === root ? d.parent : d.children)
+                 .attr("cursor", "pointer")
+                 .on("click", d => d === root ? zoomout(root) : zoomin(d.parent));
 
-         canvas.append("text")
-               .attr("class", "bar-title")
-               .attr("style",  `font: ${headerLineSpace}px ${textStyle}`)
-               .attr("x", (width / 2))             
-               .attr("y", (margin.top))
-               .attr("text-anchor", "middle")  
-               .text(`${metric}`);
+             canvas.append("text")
+                   .attr("class", "bar-title")
+                   .attr("style",  `font: ${headerLineSpace}px ${textStyle}`)
+                   .attr("x", (width / 2))             
+                   .attr("y", (margin.top))
+                   .attr("text-anchor", "middle")  
+                   .text(`${metrics[metric]}`);
+         }
      }
 
      function render(group, root) {
-         console.log(root);
+         
          // Then d3.treemap computes the position of each element of the hierarchy
          
          //var color = d3.scaleOrdinal().domain(data).range(colorPalette2);
@@ -286,7 +295,7 @@
               .on("click", d => d === root ? zoomout(root) : zoomin(d));
 
          //var range = d3.extent(nodes.data(), d => d === root ? null : d.children ? d.data.mean_quality : d.data.quality_weighted_sum);
-
+         
          nodes.append("rect")
               .attr('x', function (d) { return d.x0; })
               .attr('y', function (d) { return d.y0; })
@@ -329,36 +338,41 @@
          nodeText.each(wrap);
          
          function wrap(d) {
-             console.log(d);
+             
              text = d3.select(this);
              words = d.data.name.split(" ").reverse();
              lineNumber = 1;
              while (word = words.pop()) {
                  span = text.append("tspan")
                             .text(word)
-                            .attr("font-weight", "400")
+                            .attr("font-weight", "700")
                             .attr("class", "body name")
                             .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
                             .attr("y", d => d.y0+(textLineSpace*lineNumber))
                             .attr("line-number",lineNumber);
                  lineNumber += 1;
-             }
+             };
              
              text.append("tspan")
-                                .text(d => d.children ? `Number of Articles: ${d.value}` : '')
-                                .attr("class", d => d === root ? "header value" : "body value")
-                                .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-                                .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
-                                .attr("fill-opacity",0.7)
-                                .attr("line-number",lineNumber);// +20 to adjust position (lower)
-
-             text.append("tspan")
-                 .text(d => d.children ? `Mean Quality: ${d.data['weighted_sum']}` : `Quality: ${d.data['weighted_sum']}`)
+                 .text(d => d.children ? `Number of Articles: ${d.value}` : '')
                  .attr("class", d => d === root ? "header value" : "body value")
                  .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
                  .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
+                 .attr("style",  `font: ${metricLineSpace}px ${textStyle}`)
                  .attr("fill-opacity",0.7)
-                 .attr("line-number",d => d.children ? lineNumber+1 : lineNumber);    // +20 to adjust position (lower)
+                 .attr("line-number",lineNumber);// +20 to adjust position (lower)
+
+             for (var metric in metrics) {
+                 text.append("tspan")
+                     .text(d => `${metrics[metric]}: ${d.data[metric].toFixed(2)}`)
+                     .attr("class", d => d === root ? "header value" : "body value")
+                     .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
+                     .attr("y", d => d === root ? d.y0+(headerLineSpace*2) : d.y0+(textLineSpace*lineNumber))
+                     .attr("style",  `font: ${metricLineSpace}px ${textStyle}`)
+                     .attr("fill-opacity",0.7)
+                     .attr("line-number",d => d.children ? lineNumber+1 : lineNumber);    // +20 to adjust position (lower)
+                 lineNumber += 1;
+                 }
          }
          
 
@@ -391,25 +405,60 @@
 	 });
      };
 
+     function setMetric(nodeList) {
+         for (var node of nodeList.nodes()) {
+             metric = node.parentNode.id;
+             d3.select(node).attr("id", metric);
+         }
+     }
+
      function zoomin(d) {
          var group0 = group.attr("pointer-events", "none");
          var group1 = group = treemapSVG.append("g").attr("id","canvas-treeMap").call(render, d);
+
+         var barCanvas0 = d3.selectAll("g.bar-canvas").attr("pointer-events", "none");
+         var barCanvas1 = d3.selectAll("svg.bar-svg")
+                            .append("g")
+                            .attr("class","bar-canvas")
+                            .call(setMetric);
+
+         d3.select("svg.bar-svg")
+           .transition()
+           .duration(750)
+           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove())
+           .call(t => barCanvas1.call(renderBarGraph, d, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, .7)));
+         
+         
+         //var barCanvas1 = barCanvas = SVG.append("g").attr("id","canvas-treeMap").call(render, d);
 
          x.domain([d.x0, d.x1]);
          y.domain([d.y0, d.y1]);
 
          treemapSVG.transition()
-            .duration(750)
-            .call(t => group0.transition(t).remove()
-                             .call(position, d.parent))
-            .call(t => group1.transition(t)
-                             .attrTween("opacity", () => d3.interpolate(0, 1))
-                             .call(position, d));
+                   .duration(750)
+                   .call(t => group0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove()
+                                    .call(position, d.parent))
+                   .call(t => group1.transition(t)
+                                    .attrTween("opacity", () => d3.interpolate(0, 1))
+                                    .call(position, d));
      }
 
      function zoomout(d) {
          const group0 = group.attr("pointer-events", "none");
          const group1 = group = treemapSVG.insert("g", "*").attr("id","canvas-treeMap").call(render, d.parent);
+
+         var barCanvas0 = d3.selectAll("g.bar-canvas").attr("pointer-events", "none");
+         var barCanvas1 = d3.selectAll("svg.bar-svg")
+                            .append("g")
+                            .attr("class","bar-canvas")
+                            .call(setMetric);
+
+         d3.select("svg.bar-svg")
+           .transition()
+           .duration(750)
+           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove())
+           .call(t => barCanvas1.call(renderBarGraph, d.parent, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, .7)));
+         
 
          x.domain([d.parent.x0, d.parent.x1]);
          y.domain([d.parent.y0, d.parent.y1]);
