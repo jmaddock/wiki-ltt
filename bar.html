@@ -79,9 +79,9 @@
 
  var metrics = {
      "weighted_sum":"Quality",
-     "num_revisions":"Revisions",
      "num_unique_registered_users":"Unique Registered Editors",
-     "monthly_pageviews":"Monthly Pageviews"
+     "monthly_pageviews":"Monthly Pageviews",
+     "num_revisions":"Revisions"
  };
  
  var width = 1500;
@@ -220,13 +220,12 @@
        .call(renderBarGraph, root, barHeight);
 
      function renderBarGraph(canvas_list, root, height) {
+         var children = root.children.map(x => x.children).flat().filter(x => x !== undefined);
          for (var element of canvas_list.nodes()) {
              metric = element.id;
              canvas = d3.select(element);
              //var children = root.leaves();
-             
-             var children = root.children.map(x => x.children).flat();
-             
+
              var x_bar = d3.scaleBand()
                            .domain(children.map(function(d) { return d.data.name; }))
                            .range([margin.left+50, width])
@@ -274,6 +273,29 @@
                    .attr("y", (margin.top))
                    .attr("text-anchor", "middle")  
                    .text(`${metrics[metric]}`);
+
+             bars.on("mouseover", function(d) {
+                 if (d != root) {
+	             toolTip.transition()		
+                            .duration(200)		
+                            .style("opacity", .9);
+                     
+                     toolTipText = `${d.data.name}`;
+                     toolTipText += d.data.children ? `<br/>Number of Articles: ${d.value}`: '';
+                     for (metric in metrics) {
+                         toolTipText += `<br/>${metrics[metric]}: ${d.data[metric].toFixed(2)}`;
+                     };
+                     toolTip.html(toolTipText)
+                            .style("left", (d3.event.pageX) + "px")		
+                            .style("top", (d3.event.pageY - 28) + "px");
+                 }
+             });
+
+             bars.on("mouseout", function(d) {		
+                 toolTip.transition()		
+                        .duration(500)		
+                        .style("opacity", 0);
+	     });
          }
      }
 
@@ -385,16 +407,15 @@
 	         toolTip.transition()		
                         .duration(200)		
                         .style("opacity", .9);
-                 
-		 if (d.data.children) {
-                     toolTip.html(`${d.data.name}<br/>${d.value}`)	
-                            .style("left", (d3.event.pageX) + "px")		
-                            .style("top", (d3.event.pageY - 28) + "px");
-                 } else {
-                     toolTip.html(`${d.data.name}`)	
-                            .style("left", (d3.event.pageX) + "px")		
-                            .style("top", (d3.event.pageY - 28) + "px");
-                 }
+              
+                 toolTipText = `${d.data.name}`;
+                 toolTipText += d.data.children ? `<br/>Number of Articles: ${d.value}`: '';
+                 for (metric in metrics) {
+                     toolTipText += `<br/>${metrics[metric]}: ${d.data[metric].toFixed(2)}`;
+                 };
+                 toolTip.html(toolTipText)
+                        .style("left", (d3.event.pageX) + "px")		
+                        .style("top", (d3.event.pageY - 28) + "px");
              }
          });
 
