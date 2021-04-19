@@ -262,7 +262,7 @@
                               .attr("height",  d => y_bar(0) - y_bar(d.data[metric]))
                               .attr("fill", d => (color(d.parent.data.name)))
                               .attr("fill-opacity", 0.6)
-                              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > d.parent.data.misalignment_std ? "red" : "");
+                              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > (d.parent.data.misalignment_std + d.parent.data.misalignment) ? "red" : "");
 
              bars.filter(d => d === root ? d.parent : d.children)
                  .attr("cursor", "pointer")
@@ -326,7 +326,7 @@
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
               .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > d.parent.data.misalignment_std ? "red" : "")
+              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > (d.parent.data.misalignment_std + d.parent.data.misalignment) ? "red" : "")
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
 
