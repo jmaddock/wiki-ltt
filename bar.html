@@ -81,8 +81,8 @@
      "weighted_sum":"Quality",
      "num_unique_registered_users":"Unique Registered Editors",
      "monthly_pageviews":"Monthly Pageviews",
-     "num_revisions":"Revisions",
-     "misalignment":"Misalignment"
+     //"num_revisions":"Revisions",
+     "misalignment":"Quality/Pageview Misalignment"
  };
  
  var width = 1500;
@@ -200,20 +200,22 @@
 
      var barHeight = ((height/2)/Object.keys(metrics).length);
      for (var metric in metrics) {
-         var barContainer = d3.select("#bar-container")
-                              .append("div")
-                              .attr("class",`bar-container`)
-                              .attr("id",`${metric}`);
+         if (metric != "misalignment") {
+             var barContainer = d3.select("#bar-container")
+                                  .append("div")
+                                  .attr("class",`bar-container`)
+                                  .attr("id",`${metric}`);
 
-         var barSVG = barContainer.append("svg")
-                                  .attr("class","bar-svg")
-                                  .attr("id",`${metric}`)
-                                  .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom])
-                                  .attr("style", `max-width: ${width}px`);
+             var barSVG = barContainer.append("svg")
+                                      .attr("class","bar-svg")
+                                      .attr("id",`${metric}`)
+                                      .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom])
+                                      .attr("style", `max-width: ${width}px`);
 
-         var barCanvas = barSVG.append("g")
-                               .attr("class","bar-canvas")
-                               .attr("id",`${metric}`);
+             var barCanvas = barSVG.append("g")
+                                   .attr("class","bar-canvas")
+                                   .attr("id",`${metric}`);
+         }
 
      };
 
