@@ -81,7 +81,8 @@
      "weighted_sum":"Quality",
      "num_unique_registered_users":"Unique Registered Editors",
      "monthly_pageviews":"Monthly Pageviews",
-     "num_revisions":"Revisions"
+     "num_revisions":"Revisions",
+     "misalignment":"Misalignment"
  };
  
  var width = 1500;
@@ -95,7 +96,7 @@
  var format = d3.format(",d");
  //var color = d3.scaleOrdinal(d3.schemeCategory10)
  var layout = "treemapSquarify";
- var datapath = "edcast_taxo_metrics_03-26-21.json";//"joined_metrics_1-5-21.json";
+ var datapath = "edcast_taxo_metrics_04-30-21.json";//"joined_metrics_1-5-21.json";
  var padding = 1;
 
  // set the dimensions and margins of the graph
@@ -260,7 +261,8 @@
                               .attr("y", function(d) { return y_bar(d.data[metric]); })
                               .attr("height",  d => y_bar(0) - y_bar(d.data[metric]))
                               .attr("fill", d => (color(d.parent.data.name)))
-                              .attr("fill-opacity", 0.6);
+                              .attr("fill-opacity", 0.6)
+                              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > d.parent.data.misalignment_std ? "red" : "");
 
              bars.filter(d => d === root ? d.parent : d.children)
                  .attr("cursor", "pointer")
@@ -324,7 +326,7 @@
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
               .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              //.attr("stroke", d => d === root ? "" : "black")
+              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > d.parent.data.misalignment_std ? "red" : "")
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
 
@@ -351,7 +353,7 @@
                    .attr("y", d => d.y0+headerLineSpace);
 
          headerText.append("tspan")
-                   .text(d => `${d.value}`)
+                   .text(d => `Number of Articles: ${d.value}; Mean Misalignment: ${d.data.misalignment.toFixed(2)}; STD of Misalignment: ${d.data.misalignment_std.toFixed(2)}`)
                    .attr("class", "header value")
                    .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
                    .attr("y", d => d.y0+(headerLineSpace*2))
