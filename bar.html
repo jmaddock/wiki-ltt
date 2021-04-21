@@ -161,6 +161,20 @@
      });
  }
 
+ function strokeColor(d, root) {
+     if (d === root) {
+         return "";
+     } else if (d.data.misalignment > (d.parent.data.misalignment_std)) {
+         return "blue";
+     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std)) {
+         return "red";
+     } else if (d.data.weighted_sum >= 4 && Math.abs(d.data.misalignment) < d.parent.data.misalignment_std) {
+         return "green";
+     } else {
+         return "";
+     }
+ }
+
  d3.select(window).on("resize", resizeText);
 
  var toolTip = d3.select("body").append("div")	
@@ -209,7 +223,7 @@
              var barSVG = barContainer.append("svg")
                                       .attr("class","bar-svg")
                                       .attr("id",`${metric}`)
-                                      .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom])
+                                      .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom + headerLineSpace])
                                       .attr("style", `max-width: ${width}px`);
 
              var barCanvas = barSVG.append("g")
@@ -245,12 +259,12 @@
 
              canvas.append("g")
                    .attr("class", "x axis")
-                   .attr("transform", "translate(0," + (height - margin.bottom) + ")")
+                   .attr("transform", "translate(0," + (height - margin.bottom + headerLineSpace) + ")")
                    .call(xAxis);
 
              canvas.append("g")
                    .attr("class", "y axis")
-                   .attr("transform", "translate(50,0)")
+                   .attr("transform", `translate(50,${headerLineSpace})`)
                    .style("font", `${headerLineSpace}px ${textStyle}`)
                    .call(yAxis);
 
@@ -260,11 +274,11 @@
                               .attr("class", "bar")
                               .attr("x", function(d) { return x_bar(d.data.name); })
                               .attr("width", x_bar.bandwidth())
-                              .attr("y", function(d) { return y_bar(d.data[metric]); })
+                              .attr("y", function(d) { return y_bar(d.data[metric]) + headerLineSpace; })
                               .attr("height",  d => y_bar(0) - y_bar(d.data[metric]))
                               .attr("fill", d => (color(d.parent.data.name)))
                               .attr("fill-opacity", 0.6)
-                              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > (d.parent.data.misalignment_std + d.parent.data.misalignment) ? "red" : "");
+                              .attr("stroke", d => strokeColor(d,root));
 
              bars.filter(d => d === root ? d.parent : d.children)
                  .attr("cursor", "pointer")
@@ -272,11 +286,11 @@
 
              canvas.append("text")
                    .attr("class", "bar-title")
-                   .attr("style",  `font: ${headerLineSpace}px ${textStyle}`)
-                   .attr("x", (width / 2))             
+                   .attr("style",  `font: ${headerLineSpace}px ${textStyle}; font-weight: 700`)
+                   .attr("x", 0)             
                    .attr("y", (margin.top))
-                   .attr("text-anchor", "middle")  
-                   .text(`${metrics[metric]}`);
+                   .text(`${metrics[metric]}`)
+                   .attr("font-weight", "700");
 
              bars.on("mouseover", function(d) {
                  if (d != root) {
@@ -328,7 +342,7 @@
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
               .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              .attr("stroke", d => d === root ? "" : Math.abs(d.data.misalignment) > (d.parent.data.misalignment_std + d.parent.data.misalignment) ? "red" : "")
+              .attr("stroke", d => strokeColor(d, root))
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
 
