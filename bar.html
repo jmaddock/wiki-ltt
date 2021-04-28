@@ -166,9 +166,9 @@
  function strokeColor(d, root) {
      if (d === root) {
          return "";
-     } else if (d.data.misalignment > (d.parent.data.misalignment_std*2)) {
+     } else if (d.data.misalignment > (d.parent.data.misalignment_std)) {
          return "blue";
-     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std*2)) {
+     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std)) {
          return "red";
      } else if (d.data.weighted_sum >= 4 && Math.abs(d.data.misalignment) < d.parent.data.misalignment_std) {
          return "green";
