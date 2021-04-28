@@ -78,11 +78,11 @@
  ];
 
  var metrics = {
+     "misalignment":"Misalignment",
      "weighted_sum":"Quality",
-     "num_unique_registered_users":"Unique Registered Editors",
-     "monthly_pageviews":"Monthly Pageviews",
+     //"num_unique_registered_users":"Editors",
+     "monthly_pageviews":"Pageviews",
      //"num_revisions":"Revisions",
-     "misalignment":"Quality/Pageview Misalignment"
  };
  
  var width = 1500;
@@ -103,6 +103,8 @@
  var margin = {top: 10, right: 10, bottom: 10, left: 10},
      width = width - margin.left - margin.right,
      height = height - margin.top - margin.bottom;
+
+ const urlParams = new URLSearchParams(window.location.search);
 
  function color(range) {
      return d3.scaleSequential(d3['interpolateGreys']).domain(range);
@@ -164,9 +166,9 @@
  function strokeColor(d, root) {
      if (d === root) {
          return "";
-     } else if (d.data.misalignment > (d.parent.data.misalignment_std)) {
+     } else if (d.data.misalignment > (d.parent.data.misalignment_std*2)) {
          return "blue";
-     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std)) {
+     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std*2)) {
          return "red";
      } else if (d.data.weighted_sum >= 4 && Math.abs(d.data.misalignment) < d.parent.data.misalignment_std) {
          return "green";
@@ -187,11 +189,11 @@
      // Give the data to this cluster layout:
      var root = d3.hierarchy(data)
                   .sum(d => d.value)
-                  .sort((a, b) => b.data.weighted_sum - a.data.weighted_sum); // Here the size of each leave is given in the 'value' field in input data
+                  .sort((a, b) => b.data.misalignment - a.data.misalignment); // Here the size of each leave is given in the 'value' field in input data
      // append the svg object to the body of the page
      var treemapSVG = d3.select("#treemap-container")
                  .append("svg")
-                 .attr("viewBox", [-margin.left, -headerHeight -margin.top, width + margin.right + margin.left, height/2 + headerHeight + margin.top + margin.bottom])
+                 .attr("viewBox", [-margin.left, -headerHeight*2 -margin.top, width + margin.right + margin.left, height/2 + headerHeight*2 + margin.top + margin.bottom])
                  .attr("style", `max-width: ${width}px`);
 
      var color = d3.scaleOrdinal().domain(root.children).range(colorPalette2);
@@ -214,7 +216,7 @@
 
      var barHeight = ((height/2)/Object.keys(metrics).length);
      for (var metric in metrics) {
-         if (metric != "misalignment") {
+         //if (metric != "misalignment") {
              var barContainer = d3.select("#bar-container")
                                   .append("div")
                                   .attr("class",`bar-container`)
@@ -229,7 +231,7 @@
              var barCanvas = barSVG.append("g")
                                    .attr("class","bar-canvas")
                                    .attr("id",`${metric}`);
-         }
+         //}
 
      };
 
@@ -248,9 +250,20 @@
                            .range([margin.left+50, width])
                            .padding(0.1);
 
-             var y_bar = d3.scaleLinear()
-                           .domain([0, d3.max(children, d => d.data[metric])]).nice()
-                           .range([(height - margin.top - margin.bottom), 0]);
+             if (metric == 'misalignment') {
+                 var y_bar = d3.scaleLinear()
+                               .domain([d3.min(children, d => d.data[metric]), d3.max(children, d => d.data[metric])]).nice()
+                               .range([(height - margin.top - margin.bottom), 0]);
+             } else if (metric == 'weighted_sum') {
+                 var y_bar = d3.scaleLinear()
+                               .domain([0, 6]).nice()
+                               .range([(height - margin.top - margin.bottom), 0]);
+
+             } else {
+                 var y_bar = d3.scaleLinear()
+                               .domain([0, d3.max(children, d => d.data[metric])]).nice()
+                               .range([(height - margin.top - margin.bottom), 0]);
+             }
 
              var xAxis = d3.axisBottom(x_bar);
 
@@ -259,12 +272,12 @@
 
              canvas.append("g")
                    .attr("class", "x axis")
-                   .attr("transform", "translate(0," + (height - margin.bottom + headerLineSpace) + ")")
+                   .attr("transform", "translate(0," + (height - margin.bottom + (headerLineSpace*1.5)) + ")")
                    .call(xAxis);
 
              canvas.append("g")
                    .attr("class", "y axis")
-                   .attr("transform", `translate(50,${headerLineSpace})`)
+                   .attr("transform", `translate(50,${headerLineSpace*1.5})`)
                    .style("font", `${headerLineSpace}px ${textStyle}`)
                    .call(yAxis);
 
@@ -274,8 +287,8 @@
                               .attr("class", "bar")
                               .attr("x", function(d) { return x_bar(d.data.name); })
                               .attr("width", x_bar.bandwidth())
-                              .attr("y", function(d) { return y_bar(d.data[metric]) + headerLineSpace; })
-                              .attr("height",  d => y_bar(0) - y_bar(d.data[metric]))
+                              .attr("y", d => d.data[metric] >= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + (headerLineSpace*1.5))
+                              .attr("height",  d => Math.abs(y_bar(0) - y_bar(d.data[metric])))
                               .attr("fill", d => (color(d.parent.data.name)))
                               .attr("fill-opacity", 0.6)
                               .attr("stroke", d => strokeColor(d,root));
@@ -513,10 +526,10 @@
 
      function position(group, root) {
          group.selectAll("g.node")
-              .attr("transform", d => d === root ? `translate(0,${-headerHeight})` : `translate(${x(d.x0)},${y(d.y0)})`)
+              .attr("transform", d => d === root ? `translate(0,${-headerHeight*2})` : `translate(${x(d.x0)},${y(d.y0)})`)
               .select("rect")
               .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
-              .attr("height", d => d === root ? headerHeight: y(d.y1) - y(d.y0));
+              .attr("height", d => d === root ? headerHeight*2: y(d.y1) - y(d.y0));
      }
 
      
