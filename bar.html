@@ -25,6 +25,11 @@
  .x .tick {
      visibility:hidden;
  }
+
+ label {
+     font: 12px sans-serif;
+     font-weight: 700;
+ }
  
 </style>
 
@@ -89,8 +94,8 @@
  var metrics = {
      "misalignment":"Misalignment",
      "weighted_sum":"Quality",
-     //"num_unique_registered_users":"Editors",
-     "monthly_pageviews":"Pageviews",
+     "num_unique_registered_users":"Editors",
+     "monthly_pageviews":"Views",
      //"num_revisions":"Revisions",
  };
  
@@ -174,15 +179,15 @@
 
  function strokeColor(d, root, highlightingDict) {
      if (d === root) {
-         return "";
+         return "none";
      } else if (d.data.misalignment > d.parent.data.misalignment_std && highlightingDict["over"] == true) {
-         return "blue";
+         return "black";
      } else if (d.data.misalignment <  (-d.parent.data.misalignment_std) && highlightingDict["under"] == true) {
-         return "red";
+         return "black";
      } else if (d.data.weighted_sum >= 4 && Math.abs(d.data.misalignment) < d.parent.data.misalignment_std) {
-         return "green";
+         return "none";
      } else {
-         return "";
+         return "none";
      }
  }
 
@@ -216,8 +221,9 @@
              highlightingDict["over"] = true;
              highlightingDict["under"] = true;
          };
-         d3.selectAll("rect")
-           .attr("stroke", d => strokeColor(d, root, highlightingDict));
+
+         d3.selectAll("line.highlighting")
+           .attr("stroke", d => strokeColor(d,root,highlightingDict));
      }
 
      // Give the data to this cluster layout:
@@ -333,23 +339,25 @@
              var upperLine = canvas.selectAll("bar")
                                    .data(children)
                                    .enter()
-                                   .filter(d => d.data.misalignment > d.parent.data.misalignment_std)
+                                   //.filter(d => d.data.misalignment > d.parent.data.misalignment_std)
                                    .append("line")
-                                   .attr("stroke","black")
+                                   .attr("class","highlighting")
+                                   .attr("stroke", d => strokeColor(d,root, highlightingDict))
                                    .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("y1", 0 - margin.top)
-                                   .attr("y2", d => y_bar(d.data[metric]) + (headerLineSpace*1.5));
+                                   .attr("y2", d => d.data[metric] >= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + headerLineSpace*1.5);
 
              var lowerLine = canvas.selectAll("bar")
                                    .data(children)
                                    .enter()
-                                   .filter(d => d.data.misalignment > d.parent.data.misalignment_std)
+                                   //.filter(d => d.data.misalignment > d.parent.data.misalignment_std)
                                    .append("line")
-                                   .attr("stroke","black")
+                                   .attr("class","highlighting")
+                                   .attr("stroke", d => strokeColor(d, root, highlightingDict))
                                    .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
-                                   .attr("y1", y_bar(0) + headerLineSpace*1.5)
+                                   .attr("y1", d => d.data[metric] <= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + headerLineSpace*1.5)
                                    .attr("y2", height + margin.top + margin.bottom + (headerLineSpace*1.5));
 
              bars.filter(d => d === root ? d.parent : d.children)
