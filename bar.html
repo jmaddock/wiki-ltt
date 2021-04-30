@@ -224,6 +224,9 @@
 
          d3.selectAll("line.highlighting")
            .attr("stroke", d => strokeColor(d,root,highlightingDict));
+
+         d3.selectAll("rect.treemap")
+           .attr("stroke", d => strokeColor(d,root,highlightingDict));
      }
 
      // Give the data to this cluster layout:
@@ -233,7 +236,7 @@
      // append the svg object to the body of the page
      var treemapSVG = d3.select("#treemap-container")
                  .append("svg")
-                 .attr("viewBox", [-margin.left, -headerHeight*2 -margin.top, width + margin.right + margin.left, height/2 + headerHeight*2 + margin.top + margin.bottom])
+                 .attr("viewBox", [-margin.left, -headerHeight*1.5 -margin.top, width + margin.right + margin.left, height/2 + headerHeight*1.5 + margin.top + margin.bottom])
                  .attr("style", `max-width: ${width}px`);
 
      var color = d3.scaleOrdinal().domain(root.children).range(colorPalette2);
@@ -595,10 +598,10 @@
 
      function position(group, root) {
          group.selectAll("g.node")
-              .attr("transform", d => d === root ? `translate(0,${-headerHeight*2})` : `translate(${x(d.x0)},${y(d.y0)})`)
+              .attr("transform", d => d === root ? `translate(0,${-headerHeight*1.5})` : `translate(${x(d.x0)},${y(d.y0)})`)
               .select("rect")
               .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
-              .attr("height", d => d === root ? headerHeight*2: y(d.y1) - y(d.y0));
+              .attr("height", d => d === root ? headerHeight*1.5: y(d.y1) - y(d.y0));
      }
 
      
