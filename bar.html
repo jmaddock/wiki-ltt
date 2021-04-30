@@ -31,6 +31,15 @@
 <!-- Create a div where the graph will take place -->
 <div id="treemap-container"></div>
 <div id="bar-container"></div>
+<div id="controls">
+    <label for="highlighting">Highlighting:</label>
+
+    <select name="highlighting" id="highlighting">
+        <option value="under">Under</option>
+        <option value="over">Over</option>
+        <option value="all">All</option>
+    </select>
+</div>
 
 <script>
  var colorPalette2 = [
@@ -163,12 +172,12 @@
      });
  }
 
- function strokeColor(d, root) {
+ function strokeColor(d, root, highlightingDict) {
      if (d === root) {
          return "";
-     } else if (d.data.misalignment > (d.parent.data.misalignment_std)) {
+     } else if (d.data.misalignment > d.parent.data.misalignment_std && highlightingDict["over"] == true) {
          return "blue";
-     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std)) {
+     } else if (d.data.misalignment <  (-d.parent.data.misalignment_std) && highlightingDict["under"] == true) {
          return "red";
      } else if (d.data.weighted_sum >= 4 && Math.abs(d.data.misalignment) < d.parent.data.misalignment_std) {
          return "green";
@@ -185,6 +194,31 @@
 
  // read json data
  d3.json(datapath, function(data) {
+
+     var highlightingDict = {
+         "over":false,
+         "under":true
+     };
+
+     var highlightingStyle = "stroke";
+
+     var highlightingSelector = document.querySelector("select#highlighting");
+     highlightingSelector.addEventListener("change", updateHighlighting);
+
+     function updateHighlighting(e) {
+         if (e.target.value == "over") {
+             highlightingDict["over"] = true;
+             highlightingDict["under"] = false;
+         } else if (e.target.value == "under") {
+             highlightingDict["over"] = false;
+             highlightingDict["under"] = true;
+         } else {
+             highlightingDict["over"] = true;
+             highlightingDict["under"] = true;
+         };
+         d3.selectAll("rect")
+           .attr("stroke", d => strokeColor(d, root, highlightingDict));
+     }
 
      // Give the data to this cluster layout:
      var root = d3.hierarchy(data)
@@ -217,20 +251,22 @@
      var barHeight = ((height/2)/Object.keys(metrics).length);
      for (var metric in metrics) {
          //if (metric != "misalignment") {
-             var barContainer = d3.select("#bar-container")
+             /*var barContainer = d3.select("#bar-container")
                                   .append("div")
                                   .attr("class",`bar-container`)
-                                  .attr("id",`${metric}`);
+                                    .attr("id",`${metric}`);
+         */
 
-             var barSVG = barContainer.append("svg")
-                                      .attr("class","bar-svg")
-                                      .attr("id",`${metric}`)
-                                      .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom + headerLineSpace])
-                                      .attr("style", `max-width: ${width}px`);
+         var barSVG = d3.select("#bar-container")
+                        .append("svg")
+                        .attr("class","bar-svg")
+                        .attr("id",`${metric}`)
+                        .attr("viewBox", [-margin.left, -margin.top, width + margin.right + margin.left, barHeight + margin.top + margin.bottom + headerLineSpace])
+                        .attr("style", `max-width: ${width}px; display: block;`);
 
-             var barCanvas = barSVG.append("g")
-                                   .attr("class","bar-canvas")
-                                   .attr("id",`${metric}`);
+         var barCanvas = barSVG.append("g")
+                               .attr("class","bar-canvas")
+                               .attr("id",`${metric}`);
          //}
 
      };
@@ -270,11 +306,12 @@
              var yAxis = d3.axisLeft(y_bar)
                            .ticks(5);
 
-             canvas.append("g")
+             /*canvas.append("g")
                    .attr("class", "x axis")
                    .attr("transform", "translate(0," + (height - margin.bottom + (headerLineSpace*1.5)) + ")")
                    .call(xAxis);
-
+             */
+             
              canvas.append("g")
                    .attr("class", "y axis")
                    .attr("transform", `translate(50,${headerLineSpace*1.5})`)
@@ -290,8 +327,30 @@
                               .attr("y", d => d.data[metric] >= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + (headerLineSpace*1.5))
                               .attr("height",  d => Math.abs(y_bar(0) - y_bar(d.data[metric])))
                               .attr("fill", d => (color(d.parent.data.name)))
-                              .attr("fill-opacity", 0.6)
-                              .attr("stroke", d => strokeColor(d,root));
+                              .attr("fill-opacity", 0.6);
+                              //.attr("stroke", d => strokeColor(d,root,highlightingDict));
+
+             var upperLine = canvas.selectAll("bar")
+                                   .data(children)
+                                   .enter()
+                                   .filter(d => d.data.misalignment > d.parent.data.misalignment_std)
+                                   .append("line")
+                                   .attr("stroke","black")
+                                   .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
+                                   .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
+                                   .attr("y1", 0 - margin.top)
+                                   .attr("y2", d => y_bar(d.data[metric]) + (headerLineSpace*1.5));
+
+             var lowerLine = canvas.selectAll("bar")
+                                   .data(children)
+                                   .enter()
+                                   .filter(d => d.data.misalignment > d.parent.data.misalignment_std)
+                                   .append("line")
+                                   .attr("stroke","black")
+                                   .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
+                                   .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
+                                   .attr("y1", y_bar(0) + headerLineSpace*1.5)
+                                   .attr("y2", height + margin.top + margin.bottom + (headerLineSpace*1.5));
 
              bars.filter(d => d === root ? d.parent : d.children)
                  .attr("cursor", "pointer")
@@ -299,11 +358,10 @@
 
              canvas.append("text")
                    .attr("class", "bar-title")
-                   .attr("style",  `font: ${headerLineSpace}px ${textStyle}; font-weight: 700`)
+                   .attr("style",  `font: ${headerLineSpace}px ${textStyle}; font-weight: 700; text-anchor: left`)
                    .attr("x", 0)             
                    .attr("y", (margin.top))
-                   .text(`${metrics[metric]}`)
-                   .attr("font-weight", "700");
+                   .text(`${metrics[metric]}`);
 
              bars.on("mouseover", function(d) {
                  if (d != root) {
@@ -350,12 +408,13 @@
          //var range = d3.extent(nodes.data(), d => d === root ? null : d.children ? d.data.mean_quality : d.data.quality_weighted_sum);
          
          nodes.append("rect")
+              .attr("class","treemap")
               .attr('x', function (d) { return d.x0; })
               .attr('y', function (d) { return d.y0; })
               .attr('width', function (d) { return d.x1 - d.x0; })
               .attr('height', function (d) { return d.y1 - d.y0; })
               .attr("fill", d => d === root ? "#fff" : d.children ? color(d.data.name) : "#ccc")
-              .attr("stroke", d => strokeColor(d, root))
+              .attr("stroke", d => strokeColor(d, root, highlightingDict))
               .attr("fill-opacity", 0.6)
               .attr("id", d => (d.uid = uuidv4()));
 
@@ -465,8 +524,9 @@
      }
 
      function zoomin(d) {
+         root = d;
          var group0 = group.attr("pointer-events", "none");
-         var group1 = group = treemapSVG.append("g").attr("id","canvas-treeMap").call(render, d);
+         var group1 = group = treemapSVG.append("g").attr("id","canvas-treeMap").call(render, root);
 
          var barCanvas0 = d3.selectAll("g.bar-canvas").attr("pointer-events", "none");
          var barCanvas1 = d3.selectAll("svg.bar-svg")
@@ -496,8 +556,9 @@
      }
 
      function zoomout(d) {
+         root = d.parent;
          const group0 = group.attr("pointer-events", "none");
-         const group1 = group = treemapSVG.insert("g", "*").attr("id","canvas-treeMap").call(render, d.parent);
+         const group1 = group = treemapSVG.insert("g", "*").attr("id","canvas-treeMap").call(render, root);
 
          var barCanvas0 = d3.selectAll("g.bar-canvas").attr("pointer-events", "none");
          var barCanvas1 = d3.selectAll("svg.bar-svg")
