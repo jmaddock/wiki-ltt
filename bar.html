@@ -9,6 +9,10 @@
 
 
 <style>
+ div {
+     max-width: 1480px;
+ }
+ 
  div.tooltip {	
      position: absolute;			
      text-align: left;			
@@ -30,21 +34,23 @@
      font: 12px sans-serif;
      font-weight: 700;
  }
+
+ div#controls {
+     text-align: right;
+ }
  
 </style>
 
 <!-- Create a div where the graph will take place -->
 <div id="treemap-container"></div>
-<div id="bar-container"></div>
 <div id="controls">
-    <label for="highlighting">Highlighting:</label>
-
     <select name="highlighting" id="highlighting">
-        <option value="under">Under</option>
-        <option value="over">Over</option>
-        <option value="all">All</option>
+        <option value="under">High Pageviews:Low Quality</option>
+        <option value="over">Low Pageviews: High Quality</option>
+        <option value="all">All Misalignment</option>
     </select>
 </div>
+<div id="bar-container"></div>
 
 <script>
  var colorPalette2 = [
@@ -325,7 +331,9 @@
                    .attr("class", "y axis")
                    .attr("transform", `translate(50,${headerLineSpace*1.5})`)
                    .style("font", `${headerLineSpace}px ${textStyle}`)
-                   .call(yAxis);
+                     .call(yAxis);
+
+             console.log(canvas_list.nodes().indexOf(element));
 
              var bars = canvas.selectAll("bar")
                               .data(children)
@@ -348,7 +356,7 @@
                                    .attr("stroke", d => strokeColor(d,root, highlightingDict))
                                    .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
-                                   .attr("y1", 0 - margin.top)
+                                   .attr("y1", _ => canvas_list.nodes().indexOf(element) == 0 ? headerLineSpace*1.5 : 0 - margin.top)
                                    .attr("y2", d => d.data[metric] >= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + headerLineSpace*1.5);
 
              var lowerLine = canvas.selectAll("bar")
@@ -361,7 +369,7 @@
                                    .attr("x1", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("x2", d => x_bar(d.data.name) + x_bar.bandwidth()/2)
                                    .attr("y1", d => d.data[metric] <= 0 ? y_bar(d.data[metric]) + (headerLineSpace*1.5) : y_bar(0) + headerLineSpace*1.5)
-                                   .attr("y2", height + margin.top + margin.bottom + (headerLineSpace*1.5));
+                                   .attr("y2", d => canvas_list.nodes().indexOf(element) != canvas_list.nodes().length - 1 ? height + margin.top + margin.bottom + (headerLineSpace*1.5) : d.data[metric] < 0 ? height : y_bar(0) + headerLineSpace*1.5);
 
              bars.filter(d => d === root ? d.parent : d.children)
                  .attr("cursor", "pointer")
@@ -454,6 +462,7 @@
          headerText.append("tspan")
                    .text(d => `Number of Articles: ${d.value}; Mean Misalignment: ${d.data.misalignment.toFixed(2)}; STD of Misalignment: ${d.data.misalignment_std.toFixed(2)}`)
                    .attr("class", "header value")
+                   .attr("style",  `font: ${metricLineSpace}px ${textStyle}`)
                    .attr("x", d => d.x0+5)    // +10 to adjust position (more right)
                    .attr("y", d => d.y0+(headerLineSpace*2))
                    .attr("fill-opacity",0.7);    // +20 to adjust position (lower)
