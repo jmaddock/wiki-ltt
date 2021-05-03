@@ -557,8 +557,8 @@
          d3.select("svg.bar-svg")
            .transition()
            .duration(750)
-           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove())
-           .call(t => barCanvas1.call(renderBarGraph, d, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, .7)));
+           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(1, 0)).remove())
+           .call(t => barCanvas1.call(renderBarGraph, d, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, 1)));
          
          
          //var barCanvas1 = barCanvas = SVG.append("g").attr("id","canvas-treeMap").call(render, d);
@@ -568,7 +568,7 @@
 
          treemapSVG.transition()
                    .duration(750)
-                   .call(t => group0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove()
+                   .call(t => group0.transition(t).attrTween("opacity", () => d3.interpolate(1, 0)).remove()
                                     .call(position, d.parent))
                    .call(t => group1.transition(t)
                                     .attrTween("opacity", () => d3.interpolate(0, 1))
@@ -589,8 +589,8 @@
          d3.select("svg.bar-svg")
            .transition()
            .duration(750)
-           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(.7, 0)).remove())
-           .call(t => barCanvas1.call(renderBarGraph, d.parent, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, .7)));
+           .call(t => barCanvas0.transition(t).attrTween("opacity", () => d3.interpolate(1, 0)).remove())
+           .call(t => barCanvas1.call(renderBarGraph, d.parent, barHeight).transition(t).attrTween("opacity", () => d3.interpolate(0, 1)));
          
 
          x.domain([d.parent.x0, d.parent.x1]);
